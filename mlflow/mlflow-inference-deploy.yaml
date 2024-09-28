@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-inference-deployment
+  namespace: mlops
+  labels:
+    app: mlflow-inference-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-inference
+  template:
+    metadata:
+      labels:
+        app: mlflow-inference
+    spec:
+      imagePullSecrets:
+      - name: private-registry-secret
+      containers:
+      - name: mlflow-inference
+        image: registry.local/mlflow-wine-classifier:v1
+        ports:
+        - containerPort: 8000
+        env:
+        - name: GUNICORN_CMD_ARGS
+          value: "--bind=0.0.0.0 --workers=2"
+        - name: DISABLE_NGINX
+          value: "true"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 1024Mi
+          limits:
+            cpu: 500m
+            memory: 2048Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          timeoutSeconds: 10

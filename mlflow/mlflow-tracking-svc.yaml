@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-tracking-service
+  namespace: mlops
+  labels:
+    app: mlflow-tracking-service
+spec:
+  type: ClusterIP
+  selector:
+    app: mlflow
+  ports:
+  - name: tcp
+    protocol: TCP
+    port: 5000
+    targetPort: 5000

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-tracking-deployment
+  namespace: mlops
+  labels:
+    app: mlflow-tracking-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      imagePullSecrets:
+      - name: private-registry-secret
+      containers:
+      - name: mlflow-tracking
+        image: registry.local/mlflow:v1
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MLFLOW_S3_ENDPOINT_URL
+          value: "http://minio-service:9000"
+        - name: MLFLOW_S3_IGNORE_TLS
+          value: "true"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        - name: AWS_ACCESS_KEY_ID
+          value: admin
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: password
+        command: ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--workers", "2", "--backend-store-uri", "postgresql+psycopg2://postgres:$(POSTGRES_PASSWORD)@postgres-service:5432/postgres", "--default-artifact-root", "s3://mlflow-artifacts"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: 200m
+            memory: 1024Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          timeoutSeconds: 10
